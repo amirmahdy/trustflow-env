@@ -5,6 +5,7 @@ Environment manifests and policy gates for TrustFlow.
 - Deployments pin images by digest (`image@sha256:...`)
 - PR checks verify Cosign signature + CycloneDX SBOM attestation before promotion
 - Kyverno policies can enforce the same at cluster admission
+- Promotions are manual: Actions only print `IMAGE_REF=...@sha256:...`; humans update `environments/*/image-patch.yaml` and open PRs
 
 Key paths:
 

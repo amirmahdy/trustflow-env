@@ -9,14 +9,13 @@ on:
         type: choice
         options: [dev, stage]
       to_env:
-        description: "Target environment (stage|prod)"
-        required: true
+        description: "Target environment (stage|prod) for manual update"
+        required: false
         type: choice
         options: [stage, prod]
 
 permissions:
-  contents: write
-  pull-requests: write
+  contents: read
 
 jobs:
   promote:
@@ -24,22 +23,29 @@ jobs:
     steps:
       - uses: actions/checkout@v4
 
-      - name: Promote digest (copy image@sha256)
+      - name: Emit digest for manual promotion
         run: |
           set -euo pipefail
-          bash hack/promote.sh "${{ inputs.from_env }}" "${{ inputs.to_env }}"
+          from_file="environments/${{ inputs.from_env }}/image-patch.yaml"
+          if [[ ! -f "$from_file" ]]; then
+            echo "Missing: $from_file" >&2
+            exit 2
+          fi
 
-      - name: Create PR
-        uses: peter-evans/create-pull-request@v6
-        with:
-          commit-message: "promote: ${{ inputs.from_env }} -> ${{ inputs.to_env }}"
-          title: "Promote trustflow-app: ${{ inputs.from_env }} -> ${{ inputs.to_env }}"
-          body: |
-            Promotes the digest-pinned image for `trustflow-app`.
+          from_image="$(sed -nE 's/^\s*image:\s*([^ ]+)\s*$/\1/p' "$from_file" | head -n1)"
+          if [[ -z "$from_image" ]]; then
+            echo "No image found in: $from_file" >&2
+            exit 2
+          fi
 
-            This PR is expected to pass the `verify-promotion` checks which enforce:
-            - cosign keyless signature (GitHub OIDC identity)
-            - CycloneDX SBOM attestation
-          branch: promote/${{ inputs.from_env }}-to-${{ inputs.to_env }}
-          delete-branch: true
+          if ! [[ "$from_image" =~ @sha256:[a-f0-9]{64}$ ]]; then
+            echo "Source image is not digest-pinned: $from_image" >&2
+            exit 2
+          fi
 
+          echo "IMAGE_REF=$from_image"
+          if [[ -n "${{ inputs.to_env }}" ]]; then
+            echo "Next: update environments/${{ inputs.to_env }}/image-patch.yaml and open a PR."
+          else
+            echo "Next: update the target environment image-patch.yaml and open a PR."
+          fi
