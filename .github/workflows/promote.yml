@@ -1,0 +1,45 @@
+name: promote
+
+on:
+  workflow_dispatch:
+    inputs:
+      from_env:
+        description: "Source environment (dev|stage)"
+        required: true
+        type: choice
+        options: [dev, stage]
+      to_env:
+        description: "Target environment (stage|prod)"
+        required: true
+        type: choice
+        options: [stage, prod]
+
+permissions:
+  contents: write
+  pull-requests: write
+
+jobs:
+  promote:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Promote digest (copy image@sha256)
+        run: |
+          set -euo pipefail
+          bash hack/promote.sh "${{ inputs.from_env }}" "${{ inputs.to_env }}"
+
+      - name: Create PR
+        uses: peter-evans/create-pull-request@v6
+        with:
+          commit-message: "promote: ${{ inputs.from_env }} -> ${{ inputs.to_env }}"
+          title: "Promote trustflow-app: ${{ inputs.from_env }} -> ${{ inputs.to_env }}"
+          body: |
+            Promotes the digest-pinned image for `trustflow-app`.
+
+            This PR is expected to pass the `verify-promotion` checks which enforce:
+            - cosign keyless signature (GitHub OIDC identity)
+            - CycloneDX SBOM attestation
+          branch: promote/${{ inputs.from_env }}-to-${{ inputs.to_env }}
+          delete-branch: true
+

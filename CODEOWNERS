@@ -1,0 +1,3 @@
+# Require explicit review for prod promotions (configure branch protection + codeowners in GitHub).
+/environments/prod/ @YOUR_GITHUB_ORG_OR_USER
+

@@ -1,0 +1,30 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trustflow-app
+  namespace: trustflow
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: trustflow-app
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: trustflow-app
+    spec:
+      containers:
+        - name: app
+          image: ghcr.io/YOUR_GITHUB_ORG_OR_USER/trustflow-app@sha256:0000000000000000000000000000000000000000000000000000000000000000
+          ports:
+            - name: http
+              containerPort: 8080
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+

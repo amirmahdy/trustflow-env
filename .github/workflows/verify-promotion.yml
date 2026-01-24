@@ -1,0 +1,28 @@
+name: verify-promotion
+
+on:
+  pull_request:
+    branches: [main]
+
+permissions:
+  contents: read
+  id-token: write
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    env:
+      COSIGN_OIDC_ISSUER: https://token.actions.githubusercontent.com
+      # Cosign's GitHub OIDC certificate identity format may vary by setup/version.
+      # This regexp accepts the two most common forms while still pinning to this repo + workflow + branch.
+      COSIGN_CERT_IDENTITY_REGEXP: (^https://github.com/${{ github.repository_owner }}/trustflow-app/.github/workflows/supply-chain.yml@refs/heads/main$)|(^repo:${{ github.repository_owner }}/trustflow-app:ref:refs/heads/main$)
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install cosign
+        uses: sigstore/cosign-installer@v3.8.1
+        with:
+          cosign-release: v2.2.4
+
+      - name: Verify signed + SBOM-attested images (digest-pinned)
+        run: bash hack/verify-images.sh environments
