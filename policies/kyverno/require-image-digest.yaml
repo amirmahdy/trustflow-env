@@ -19,9 +19,9 @@ spec:
             deny:
               conditions:
                 any:
-                  - key: "{{ element.image }}"
-                    operator: NotMatches
-                    value: ".+@sha256:[a-f0-9]{64}$"
+                  - key: "{{ regex_match('^.+@sha256:[a-f0-9]{64}$', element.image) }}"
+                    operator: Equals
+                    value: false
     - name: require-digest-initcontainers
       match:
         any:
@@ -30,9 +30,9 @@ spec:
                 - Pod
       preconditions:
         all:
-          - key: "{{ request.object.spec.initContainers }}"
-            operator: NotEquals
-            value: null
+          - key: "{{ request.object.spec.initContainers[] | length(@) }}"
+            operator: GreaterThan
+            value: 0
       validate:
         message: "InitContainer images must be pinned by digest (image@sha256:...)."
         foreach:
@@ -40,6 +40,6 @@ spec:
             deny:
               conditions:
                 any:
-                  - key: "{{ element.image }}"
-                    operator: NotMatches
-                    value: ".+@sha256:[a-f0-9]{64}$"
+                - key: "{{ regex_match('^.+@sha256:[a-f0-9]{64}$', element.image) }}"
+                  operator: Equals
+                  value: false

@@ -15,18 +15,22 @@ spec:
                 - Pod
       verifyImages:
         - imageReferences:
-            - "ghcr.io/YOUR_GITHUB_ORG_OR_USER/trustflow-app*"
+            - "ghcr.io/amirmahdy/trustflow-app*"
           required: true
           mutateDigest: false
           attestors:
             - entries:
                 - keyless:
                     issuer: "https://token.actions.githubusercontent.com"
-                    subjectRegExp: "(^https://github.com/YOUR_GITHUB_ORG_OR_USER/trustflow-app/.github/workflows/supply-chain.yml@refs/heads/main$)|(^repo:YOUR_GITHUB_ORG_OR_USER/trustflow-app:ref:refs/heads/main$)"
+                    subjectRegExp: "(^https://github.com/amirmahdy/trustflow-app/.github/workflows/supply-chain.yml@refs/heads/main$)|(^repo:amirmahdy/trustflow-app:ref:refs/heads/main$)"
+                    rekor:
+                      url: "https://rekor.sigstore.dev"
           attestations:
-            - predicateType: "https://cyclonedx.org/schema"
+            - type: "https://cyclonedx.org/schema"
               attestors:
                 - entries:
                     - keyless:
                         issuer: "https://token.actions.githubusercontent.com"
-                        subjectRegExp: "(^https://github.com/YOUR_GITHUB_ORG_OR_USER/trustflow-app/.github/workflows/supply-chain.yml@refs/heads/main$)|(^repo:YOUR_GITHUB_ORG_OR_USER/trustflow-app:ref:refs/heads/main$)"
+                        subjectRegExp: "(^https://github.com/amirmahdy/trustflow-app/.github/workflows/supply-chain.yml@refs/heads/main$)|(^repo:amirmahdy/trustflow-app:ref:refs/heads/main$)"
+                        rekor:
+                          url: "https://rekor.sigstore.dev"

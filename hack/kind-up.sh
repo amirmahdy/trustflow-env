@@ -16,7 +16,7 @@ kind create cluster --name "$cluster_name" --config "$(dirname "$0")/kind-config
 
 helm repo add kyverno https://kyverno.github.io/kyverno/ >/dev/null
 helm repo update >/dev/null
-helm upgrade --install kyverno kyverno/kyverno -n kyverno --create-namespace >/dev/null
+helm upgrade --install kyverno kyverno/kyverno -n kyverno --create-namespace --set crds.install=true >/dev/null
 
 kubectl -n kyverno rollout status deploy/kyverno-admission-controller --timeout=180s
 kubectl -n kyverno rollout status deploy/kyverno-background-controller --timeout=180s
