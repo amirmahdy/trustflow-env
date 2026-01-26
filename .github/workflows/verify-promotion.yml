@@ -26,3 +26,52 @@ jobs:
 
       - name: Verify signed + SBOM-attested images (digest-pinned)
         run: bash hack/verify-images.sh environments
+        
+      - name: Determine target env + severity threshold
+        id: policy
+        run: |
+          set -euo pipefail
+          files="$(git diff --name-only origin/${{ github.base_ref }}... | tr '\n' ' ')"
+          THRESH="CRITICAL"
+          if echo "$files" | grep -qE '^environments/prod/'; then
+            THRESH="HIGH,CRITICAL"
+          elif echo "$files" | grep -qE '^environments/stage/'; then
+            THRESH="CRITICAL"
+          else
+            THRESH="CRITICAL"
+          fi
+          echo "threshold=$THRESH" >> $GITHUB_OUTPUT
+
+      - name: Extract promoted images
+        id: imgs
+        run: |
+          set -euo pipefail
+          files=$(git diff --name-only origin/${{ github.base_ref }}... | grep -E '^environments/(dev|stage|prod)/.*\.ya?ml$' || true)
+          if [[ -z "$files" ]]; then
+            echo "images=" >> $GITHUB_OUTPUT
+            exit 0
+          fi
+
+          imgs=$(for f in $files; do
+            sed -nE 's/^\s*image:\s*([^ ]+)\s*$/\1/p' "$f"
+          done | sort -u | tr '\n' ' ')
+
+          if [[ -z "$imgs" ]]; then
+            echo "No image references found." >&2
+            exit 1
+          fi
+
+          echo "images=$imgs" >> $GITHUB_OUTPUT
+          echo "Found images: $imgs"
+
+      - name: Trivy scan (vulnerability gate)
+        if: steps.imgs.outputs.images != ''
+        uses: aquasecurity/trivy-action@0.28.0
+        with:
+          scan-type: image
+          image-ref: ${{ steps.imgs.outputs.images }}
+          format: table
+          severity: ${{ steps.policy.outputs.threshold }}
+          ignore-unfixed: true
+          vuln-type: os,library
+          exit-code: 1
