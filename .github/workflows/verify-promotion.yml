@@ -26,52 +26,48 @@ jobs:
 
       - name: Verify signed + SBOM-attested images (digest-pinned)
         run: bash hack/verify-images.sh environments
-        
-      - name: Determine target env + severity threshold
-        id: policy
+
+      - name: Trivy scan promoted digests (env thresholds)
+        env:
+          TRIVY_IMAGE: aquasec/trivy:latest
+          TRIVY_THRESHOLD_DEFAULT: HIGH
         run: |
           set -euo pipefail
-          files="$(git diff --name-only origin/${{ github.base_ref }}... | tr '\n' ' ')"
-          THRESH="CRITICAL"
-          if echo "$files" | grep -qE '^environments/prod/'; then
-            THRESH="HIGH,CRITICAL"
-          elif echo "$files" | grep -qE '^environments/stage/'; then
-            THRESH="CRITICAL"
-          else
-            THRESH="CRITICAL"
-          fi
-          echo "threshold=$THRESH" >> $GITHUB_OUTPUT
 
-      - name: Extract promoted images
-        id: imgs
-        run: |
-          set -euo pipefail
-          files=$(git diff --name-only origin/${{ github.base_ref }}... | grep -E '^environments/(dev|stage|prod)/.*\.ya?ml$' || true)
-          if [[ -z "$files" ]]; then
-            echo "images=" >> $GITHUB_OUTPUT
-            exit 0
-          fi
+          for env_dir in environments/*; do
+            env_name="$(basename "$env_dir")"
+            threshold_var="TRIVY_THRESHOLD_${env_name^^}"
+            threshold="${!threshold_var:-${TRIVY_THRESHOLD_DEFAULT}}"
+            threshold="${threshold^^}"
 
-          imgs=$(for f in $files; do
-            sed -nE 's/^\s*image:\s*([^ ]+)\s*$/\1/p' "$f"
-          done | sort -u | tr '\n' ' ')
+            case "$threshold" in
+              CRITICAL) severities="CRITICAL" ;;
+              HIGH) severities="HIGH,CRITICAL" ;;
+              MEDIUM) severities="MEDIUM,HIGH,CRITICAL" ;;
+              LOW) severities="LOW,MEDIUM,HIGH,CRITICAL" ;;
+              UNKNOWN) severities="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL" ;;
+              *)
+                echo "Unsupported Trivy threshold: ${threshold} (env: ${env_name})" >&2
+                exit 2
+                ;;
+            esac
 
-          if [[ -z "$imgs" ]]; then
-            echo "No image references found." >&2
-            exit 1
-          fi
+            mapfile -t images < <(bash hack/extract-images.sh "$env_dir")
+            if [[ ${#images[@]} -eq 0 ]]; then
+              echo "No pinned images found under: ${env_dir} (skipping)"
+              continue
+            fi
 
-          echo "images=$imgs" >> $GITHUB_OUTPUT
-          echo "Found images: $imgs"
-
-      - name: Trivy scan (vulnerability gate)
-        if: steps.imgs.outputs.images != ''
-        uses: aquasecurity/trivy-action@0.28.0
-        with:
-          scan-type: image
-          image-ref: ${{ steps.imgs.outputs.images }}
-          format: table
-          severity: ${{ steps.policy.outputs.threshold }}
-          ignore-unfixed: true
-          vuln-type: os,library
-          exit-code: 1
+            for image in "${images[@]}"; do
+              echo "Trivy scan (${env_name}, threshold ${threshold}): ${image}"
+              docker run --rm \
+                -v /var/run/docker.sock:/var/run/docker.sock \
+                "${TRIVY_IMAGE}" \
+                image \
+                --severity "${severities}" \
+                --exit-code 1 \
+                --ignore-unfixed \
+                --format table \
+                "${image}"
+            done
+          done
