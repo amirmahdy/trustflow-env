@@ -8,4 +8,4 @@ spec:
     spec:
       containers:
         - name: app
-          image: ghcr.io/amirmahdy/trustflow-app@sha256:b453d5d88007abee6c8f96cb3fc6410fbcb3473a3bac0d9b6fbf9a3e7793958f
+          image: ghcr.io/amirmahdy/trustflow-app@sha256:bc227f02f2e9b302fdc61aa5883763c075dafba962af85755fdfc7d3e874ed12

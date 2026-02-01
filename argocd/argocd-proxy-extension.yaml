@@ -1,0 +1,20 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cmd-params-cm
+  namespace: argocd
+data:
+  server.enable.proxy.extension: "true"
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: argocd-cm
+  namespace: argocd
+data:
+  extension.config: |
+    extensions:
+      - name: trustflow
+        backend:
+          services:
+            - url: http://trustflow-verifier.argocd.svc.cluster.local:8080

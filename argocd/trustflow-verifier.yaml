@@ -1,0 +1,104 @@
+apiVersion: v1
+kind: ServiceAccount
+metadata:
+  name: trustflow-verifier
+  namespace: argocd
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRole
+metadata:
+  name: trustflow-verifier
+rules:
+  - apiGroups:
+      - aquasecurity.github.io
+    resources:
+      - vulnerabilityreports
+    verbs:
+      - get
+      - list
+      - watch
+---
+apiVersion: rbac.authorization.k8s.io/v1
+kind: ClusterRoleBinding
+metadata:
+  name: trustflow-verifier
+roleRef:
+  apiGroup: rbac.authorization.k8s.io
+  kind: ClusterRole
+  name: trustflow-verifier
+subjects:
+  - kind: ServiceAccount
+    name: trustflow-verifier
+    namespace: argocd
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: trustflow-verifier
+  namespace: argocd
+  labels:
+    app.kubernetes.io/name: trustflow-verifier
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app.kubernetes.io/name: trustflow-verifier
+  template:
+    metadata:
+      labels:
+        app.kubernetes.io/name: trustflow-verifier
+    spec:
+      serviceAccountName: trustflow-verifier
+      containers:
+        - name: trustflow-verifier
+          image: ghcr.io/amirmahdy/trustflow-verifier@sha256:2115882818663ed22759af80505d7f209cd4b6fe3130a5307709fb4163bf3fe7
+          imagePullPolicy: IfNotPresent
+          env:
+            - name: HOME
+              value: /tmp
+            - name: SIGSTORE_CACHE_DIR
+              value: /tmp/sigstore
+            - name: COSIGN_OIDC_ISSUER
+              value: https://token.actions.githubusercontent.com
+            - name: COSIGN_CERT_IDENTITY_REGEXP
+              value: (^https://github.com/amirmahdy/trustflow-app/.github/workflows/supply-chain.yml@refs/heads/main$)|(^repo:amirmahdy/trustflow-app:ref:refs/heads/main$)
+            - name: TRUSTFLOW_VERIFY_TIMEOUT
+              value: 15s
+          ports:
+            - name: http
+              containerPort: 8080
+          volumeMounts:
+            - name: tmp
+              mountPath: /tmp
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: http
+          securityContext:
+            runAsNonRoot: true
+            runAsUser: 65532
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+      securityContext:
+        seccompProfile:
+          type: RuntimeDefault
+      volumes:
+        - name: tmp
+          emptyDir: {}
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: trustflow-verifier
+  namespace: argocd
+spec:
+  selector:
+    app.kubernetes.io/name: trustflow-verifier
+  ports:
+    - name: http
+      port: 8080
+      targetPort: http

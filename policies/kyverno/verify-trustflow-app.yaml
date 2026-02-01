@@ -26,7 +26,7 @@ spec:
                     rekor:
                       url: "https://rekor.sigstore.dev"
           attestations:
-            - type: "https://cyclonedx.org/schema"
+            - type: "https://cyclonedx.org/bom"
               attestors:
                 - entries:
                     - keyless:

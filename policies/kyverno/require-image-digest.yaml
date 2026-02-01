@@ -30,7 +30,7 @@ spec:
                 - Pod
       preconditions:
         all:
-          - key: "{{ request.object.spec.initContainers[] | length(@) }}"
+          - key: "{{ request.object.spec.initContainers || `[]` | length(@) }}"
             operator: GreaterThan
             value: 0
       validate:
@@ -40,6 +40,6 @@ spec:
             deny:
               conditions:
                 any:
-                - key: "{{ regex_match('^.+@sha256:[a-f0-9]{64}$', element.image) }}"
-                  operator: Equals
-                  value: false
+                  - key: "{{ regex_match('^.+@sha256:[a-f0-9]{64}$', element.image) }}"
+                    operator: Equals
+                    value: false
