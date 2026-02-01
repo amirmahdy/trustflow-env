@@ -31,43 +31,4 @@ jobs:
         env:
           TRIVY_IMAGE: aquasec/trivy:latest
           TRIVY_THRESHOLD_DEFAULT: HIGH
-        run: |
-          set -euo pipefail
-
-          for env_dir in environments/*; do
-            env_name="$(basename "$env_dir")"
-            threshold_var="TRIVY_THRESHOLD_${env_name^^}"
-            threshold="${!threshold_var:-${TRIVY_THRESHOLD_DEFAULT}}"
-            threshold="${threshold^^}"
-
-            case "$threshold" in
-              CRITICAL) severities="CRITICAL" ;;
-              HIGH) severities="HIGH,CRITICAL" ;;
-              MEDIUM) severities="MEDIUM,HIGH,CRITICAL" ;;
-              LOW) severities="LOW,MEDIUM,HIGH,CRITICAL" ;;
-              UNKNOWN) severities="UNKNOWN,LOW,MEDIUM,HIGH,CRITICAL" ;;
-              *)
-                echo "Unsupported Trivy threshold: ${threshold} (env: ${env_name})" >&2
-                exit 2
-                ;;
-            esac
-
-            mapfile -t images < <(bash hack/extract-images.sh "$env_dir")
-            if [[ ${#images[@]} -eq 0 ]]; then
-              echo "No pinned images found under: ${env_dir} (skipping)"
-              continue
-            fi
-
-            for image in "${images[@]}"; do
-              echo "Trivy scan (${env_name}, threshold ${threshold}): ${image}"
-              docker run --rm \
-                -v /var/run/docker.sock:/var/run/docker.sock \
-                "${TRIVY_IMAGE}" \
-                image \
-                --severity "${severities}" \
-                --exit-code 1 \
-                --ignore-unfixed \
-                --format table \
-                "${image}"
-            done
-          done
+        run: bash cmd/trivy-scan.sh environments
