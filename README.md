@@ -11,7 +11,7 @@ Key paths:
 
 - `environments/dev/`, `environments/stage/`, `environments/prod/`
 - `policies/kyverno/` (ClusterPolicies)
-- `hack/verify-images.sh` (used by CI to verify signature + attestation)
+- `scripts/verify-images.sh` (used by CI to verify signature + attestation)
 
 ## Local kind demo
 
@@ -33,7 +33,7 @@ If `require-image-digest` is enforced, install with the digest-pinned values fil
 ```bash
 helm repo add aquasecurity https://aquasecurity.github.io/helm-charts/
 helm repo update
-helm upgrade --install trivy-operator aquasecurity/trivy-operator -n trivy-system --create-namespace -f hack/trivy-operator-digests.yaml
+helm upgrade --install trivy-operator aquasecurity/trivy-operator -n trivy-system --create-namespace -f trivy/trivy-operator-digests.yaml
 kubectl get pods -n trivy-system
 kubectl get vulnerabilityreports.aquasecurity.github.io -A
 ```

@@ -24,11 +24,8 @@ jobs:
         with:
           cosign-release: v2.2.4
 
-      - name: Verify signed + SBOM-attested images (digest-pinned)
-        run: bash hack/verify-images.sh environments
+      - name: Verify signed + SBOM-attested images
+        run: bash scripts/verify-images.sh
 
-      - name: Trivy scan promoted digests (env thresholds)
-        env:
-          TRIVY_IMAGE: aquasec/trivy:latest
-          TRIVY_THRESHOLD_DEFAULT: HIGH
-        run: bash cmd/trivy-scan.sh environments
+      - name: Trivy scan promoted digests
+        run: bash trivy/trivy-scan.sh 

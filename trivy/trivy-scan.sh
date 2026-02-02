@@ -1,11 +1,12 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-root="${1:-environments}"
+root="environments"
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+extract_script="${script_dir}/../scripts/extract-images.sh"
 
-trivy_image="${TRIVY_IMAGE:-aquasec/trivy:latest}"
-default_threshold="${TRIVY_THRESHOLD_DEFAULT:-HIGH}"
+trivy_image="aquasec/trivy:latest"
+default_threshold="HIGH"
 
 if [[ ! -d "${root}" ]]; then
   echo "Environment root not found: ${root}" >&2
@@ -41,7 +42,7 @@ scan_env_dir() {
 
   severities="$(severity_for_threshold "${threshold}")"
 
-  mapfile -t images < <(bash "${script_dir}/extract-images.sh" "${env_dir}")
+  mapfile -t images < <(bash "${extract_script}" "${env_dir}")
   if [[ ${#images[@]} -eq 0 ]]; then
     echo "No pinned images found under: ${env_dir} (skipping)"
     return 0
