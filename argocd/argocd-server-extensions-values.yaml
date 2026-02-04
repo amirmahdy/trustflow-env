@@ -28,3 +28,7 @@ server:
         env:
           - name: EXTENSION_URL
             value: https://github.com/amirmahdy/trustflow-argocd-extension/raw/refs/heads/master/dist/extension-trustflow.tar
+configs:
+  rbac:
+    policy.csv: |
+      p, role:admin, extensions, invoke, trustflow, allow

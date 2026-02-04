@@ -55,46 +55,6 @@ install_argocd() {
   kubectl -n argocd rollout status deploy/argocd-server --timeout=180s
 
   kubectl apply -f argocd/argocd-proxy-extension.yaml
-
-  kubectl -n argocd create configmap trustflow-extension-override \
-    --from-file=extension-trustflow.js=../trustflow-argocd-extension/dist/extension-trustflow.js \
-    --dry-run=client -o yaml | kubectl apply -f - >/dev/null
-
-  if ! kubectl -n argocd get deploy argocd-server -o jsonpath='{.spec.template.spec.initContainers[*].name}' | grep -q 'extension-trustflow-override'; then
-    kubectl -n argocd patch deployment argocd-server --type='json' -p "$(cat <<'EOF'
-[
-  {
-    "op": "add",
-    "path": "/spec/template/spec/volumes/-",
-    "value": {
-      "name": "trustflow-extension-override",
-      "configMap": {"name": "trustflow-extension-override"}
-    }
-  },
-  {
-    "op": "add",
-    "path": "/spec/template/spec/initContainers/-",
-    "value": {
-      "name": "extension-trustflow-override",
-      "image": "quay.io/argoprojlabs/argocd-extension-installer:v0.0.9@sha256:d2b43c18ac1401f579f6d27878f45e253d1e3f30287471ae74e6a4315ceb0611",
-      "command": ["sh", "-c"],
-      "args": ["cp /override/extension-trustflow.js /tmp/extensions/resources/trustflow/extension-trustflow.js"],
-      "volumeMounts": [
-        {"name": "extensions", "mountPath": "/tmp/extensions/"},
-        {"name": "trustflow-extension-override", "mountPath": "/override"}
-      ],
-      "securityContext": {"runAsUser": 1000, "allowPrivilegeEscalation": false}
-    }
-  }
-]
-EOF
-    )" >/dev/null
-  fi
-
-  kubectl rollout restart deployment argocd-server -n argocd
-  kubectl -n argocd rollout status deploy/argocd-server --timeout=180s
-  kubectl -n argocd patch configmap argocd-rbac-cm --type merge \
-    -p '{"data":{"policy.csv":"p, role:admin, extensions, invoke, trustflow, allow\n"}}' >/dev/null
 }
 
 install_trivy_operator() {
