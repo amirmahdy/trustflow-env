@@ -24,12 +24,6 @@ server:
       tag: "d2b43c18ac1401f579f6d27878f45e253d1e3f30287471ae74e6a4315ceb0611"
     enabled: true
     extensionList:
-      - name: extension-trivy
-        env:
-          - name: EXTENSION_URL
-            value: https://github.com/mziyabo/argocd-trivy-extension/releases/latest/download/extension-trivy.tar
-          - name: EXTENSION_CHECKSUM_URL
-            value: https://github.com/mziyabo/argocd-trivy-extension/releases/latest/download/extension-trivy_checksums.txt
       - name: extension-trustflow
         env:
           - name: EXTENSION_URL
