@@ -18,6 +18,16 @@ ensure_kind_cluster() {
   fi
 }
 
+validate_env_name() {
+  case "${env_name}" in
+    dev|stage|prod) ;;
+    *)
+      echo "ERROR: env_name must be one of: dev, stage, prod (got '${env_name}')." >&2
+      exit 2
+      ;;
+  esac
+}
+
 install_kyverno() {
   helm repo add kyverno https://kyverno.github.io/kyverno/ >/dev/null
   helm repo update >/dev/null
@@ -66,8 +76,6 @@ install_trivy_operator() {
 
 apply_policies_and_env() {
   kubectl apply -k policies/kyverno
-  kubectl apply -k "environments/${env_name}"
-  kubectl -n trustflow rollout status deploy/"${env_name}-trustflow-app" --timeout=180s
 }
 
 deploy_verifier() {
@@ -91,13 +99,19 @@ deploy_verifier() {
 }
 
 deploy_trustflow_app() {
-  kubectl apply -f argocd/trustflow-app.yaml
+  local tmp_app
+  tmp_app="$(mktemp)"
+  sed -e "s|^\\([[:space:]]*path:[[:space:]]*\\).*|\\1environments/${env_name}|" \
+    argocd/trustflow-app.yaml > "${tmp_app}"
+  kubectl apply -f "${tmp_app}"
+  rm -f "${tmp_app}"
 }
 
 # --- Kind setup (local cluster) ---
 ensure_kind_cluster
 
 # --- Generic cluster setup (kind or any kube context) ---
+validate_env_name
 install_kyverno
 install_argocd
 install_trivy_operator
